@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 
 import { request } from '@/api/client'
 
@@ -11,7 +12,8 @@ const columns = [
   "保留天数",
   "冷热阈值",
   "预建天数",
-  "归档路径"
+  "归档路径",
+  "生效日期"
 ]
 const actions = [
   "提交方案审批",
@@ -45,6 +47,7 @@ export default function PartitionView() {
   const [rows, setRows] = useState<Row[]>([])
   const [total, setTotal] = useState(0)
   const [errorMessage, setErrorMessage] = useState('')
+  const [notice, setNotice] = useState('')
   const [filters, setFilters] = useState<Record<string, string>>({})
   const filterFields = useMemo(() => columns.slice(0, 3), [])
 
@@ -84,6 +87,24 @@ export default function PartitionView() {
     }
   }
 
+  async function generateGovernance() {
+    setErrorMessage('')
+    setNotice('')
+    try {
+      const response = await request('/api/governance/generate', {
+        method: 'POST',
+        body: JSON.stringify({ values: {} }),
+      })
+      const payload = await response.json()
+      if (!response.ok || !payload.ok) {
+        throw new Error(payload.message || '治理计划生成失败')
+      }
+      setNotice(payload.message || '治理计划已生成')
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : '治理计划生成失败')
+    }
+  }
+
   return (
     <section className="page" data-module="partition">
       <header className="page-head">
@@ -92,8 +113,8 @@ export default function PartitionView() {
           <p className="page-desc">管理数据表的分区方案，配置分区粒度、保留时长、冷热分层和预建策略。</p>
         </div>
         <div className="page-actions">
-          <button className="btn primary" type="button" onClick={() => setErrorMessage('分区方案登记入口尚未接入审批流')}>
-            登记分区方案
+          <button className="btn primary" type="button" onClick={() => void generateGovernance()}>
+            生成治理计划
           </button>
           <button className="btn" type="button" onClick={() => window.open(`${ENDPOINT}/export`, '_blank')}>
             导出分区治理清单
@@ -142,6 +163,9 @@ export default function PartitionView() {
                     {action}
                   </button>
                 ))}
+                <Link className="link" to={`/governance?table=${encodeURIComponent(String(row['数据表名'] ?? ''))}`}>
+                  治理计划
+                </Link>
               </td>
             </tr>
           ))}
@@ -155,6 +179,7 @@ export default function PartitionView() {
 
       <footer className="page-foot">
         <span>共 {total} 条分区治理记录</span>
+        {notice && <span className="ok-text">{notice}</span>}
         {errorMessage && <span className="error-text">{errorMessage}</span>}
       </footer>
     </section>

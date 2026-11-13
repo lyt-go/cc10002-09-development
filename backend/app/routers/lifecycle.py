@@ -12,7 +12,7 @@ router = APIRouter(prefix="/api/lifecycle", tags=["数据生命周期"])
 
 service = LifecycleService()
 
-LIST_FIELDS = ["策略编号", "数据表名", "保留天数", "冷数据阈值", "归档格式", "删除确认", "归档路径", "最后执行时间"]
+LIST_FIELDS = ["策略编号", "数据表名", "保留天数", "冷数据阈值", "归档格式", "删除确认", "归档路径", "生效日期", "最后执行时间"]
 STATUSES = ["草稿", "策略评审中", "已启用", "已停用"]
 
 

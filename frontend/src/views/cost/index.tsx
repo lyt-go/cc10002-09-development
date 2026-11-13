@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 
 import { request } from '@/api/client'
 
 const ENDPOINT = '/api/cost'
+const GOVERNANCE_ENDPOINT = '/api/governance/impact'
 const columns = [
   "账单编号",
   "数据表名",
@@ -40,12 +42,20 @@ const stats = [
 ]
 
 type Row = Record<string, string | number | null>
+type Impact = {
+  数据表名: string
+  最近作业编号: string
+  最近作业状态: string
+  最近结论: string
+  累计释放存储GB: number
+}
 
 export default function CostView() {
   const [rows, setRows] = useState<Row[]>([])
   const [total, setTotal] = useState(0)
   const [errorMessage, setErrorMessage] = useState('')
   const [filters, setFilters] = useState<Record<string, string>>({})
+  const [impacts, setImpacts] = useState<Record<string, Impact>>({})
   const filterFields = useMemo(() => columns.slice(0, 3), [])
 
   const reload = useCallback(async () => {
@@ -67,6 +77,20 @@ export default function CostView() {
   useEffect(() => {
     void reload()
   }, [reload])
+
+  useEffect(() => {
+    // 治理任务的成本联动结论：按数据表名索引，供每行账单引用
+    request(GOVERNANCE_ENDPOINT)
+      .then((response) => (response.ok ? response.json() : { items: [] }))
+      .then((payload: { items?: Impact[] }) => {
+        const map: Record<string, Impact> = {}
+        for (const item of payload.items ?? []) {
+          map[item.数据表名] = item
+        }
+        setImpacts(map)
+      })
+      .catch(() => undefined)
+  }, [])
 
   async function runAction(action: string, row: Row) {
     setErrorMessage('')
@@ -129,25 +153,43 @@ export default function CostView() {
         <thead>
           <tr>
             {columns.map((column) => <th key={column}>{column}</th>)}
+            <th>治理联动</th>
             <th>可执行动作</th>
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
-            <tr key={String(row.id)}>
-              {columns.map((column) => <td key={column}>{row[column] ?? '—'}</td>)}
-              <td className="row-actions">
-                {actions.map((action) => (
-                  <button key={action} className="link" type="button" onClick={() => void runAction(action, row)}>
-                    {action}
-                  </button>
-                ))}
-              </td>
-            </tr>
-          ))}
+          {rows.map((row) => {
+            const impact = impacts[String(row['数据表名'] ?? '')]
+            return (
+              <tr key={String(row.id)}>
+                {columns.map((column) => <td key={column}>{row[column] ?? '—'}</td>)}
+                <td>
+                  {impact ? (
+                    <>
+                      <span>
+                        {impact.最近作业编号} {impact.最近作业状态}，累计释放 {impact.累计释放存储GB}GB
+                      </span>{' '}
+                      <Link className="link" to={`/governance?table=${encodeURIComponent(impact.数据表名)}`}>
+                        治理计划
+                      </Link>
+                    </>
+                  ) : (
+                    '—'
+                  )}
+                </td>
+                <td className="row-actions">
+                  {actions.map((action) => (
+                    <button key={action} className="link" type="button" onClick={() => void runAction(action, row)}>
+                      {action}
+                    </button>
+                  ))}
+                </td>
+              </tr>
+            )
+          })}
           {rows.length === 0 && (
             <tr>
-              <td className="empty-state" colSpan={columns.length + 1}>暂无存储成本数据，可先登记成本账单</td>
+              <td className="empty-state" colSpan={columns.length + 2}>暂无存储成本数据，可先登记成本账单</td>
             </tr>
           )}
         </tbody>

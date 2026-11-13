@@ -12,7 +12,7 @@ router = APIRouter(prefix="/api/partition", tags=["分区治理"])
 
 service = PartitionService()
 
-LIST_FIELDS = ["方案编号", "数据表名", "分区字段", "分区粒度", "保留天数", "冷热阈值", "预建天数", "归档路径"]
+LIST_FIELDS = ["方案编号", "数据表名", "分区字段", "分区粒度", "保留天数", "冷热阈值", "预建天数", "归档路径", "生效日期"]
 STATUSES = ["草稿", "方案审批中", "已启用", "已停用"]
 
 

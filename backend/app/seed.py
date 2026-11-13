@@ -1,7 +1,35 @@
 """示例数据：每个模块给几条不同状态的记录，方便起服务后立刻看到内容。"""
 from __future__ import annotations
 
+from datetime import date, timedelta
 from typing import Any
+
+
+def _expired_evidence_rows() -> list[dict[str, Any]]:
+    """DWD_ORDER 的已超期分区归档证据：相对今天生成，保证演示时落在删除窗口内。
+
+    按 PLAN-0001（预建 7 天、保留 90 天、冷热阈值 30 天）推算，删除窗口是
+    锚点（今天+7）往前 90 天之外；这里给其中 4 个超期分区补上外部登记的
+    归档完成证据，剩下的超期分区在正式执行时会被证据校验拦下。
+    """
+    today = date.today()
+    rows: list[dict[str, Any]] = []
+    for index in range(4):
+        partition_date = today - timedelta(days=86 - index)
+        rows.append({
+            "id": index + 1,
+            "证据编号": f"EV-{index + 1:04d}",
+            "数据表名": "DWD_ORDER",
+            "分区": f"dt={partition_date.isoformat()}",
+            "类型": "归档",
+            "来源": "外部登记",
+            "作业编号": "",
+            "归档路径": f"/archive/dwd_order/dt={partition_date.isoformat()}",
+            "完成时间": (today - timedelta(days=30)).isoformat(),
+            "操作人": "归档系统",
+        })
+    return rows
+
 
 SEED_ROWS: dict[str, list[dict[str, Any]]] = {
     "landing": [{'id': 1,
@@ -231,7 +259,8 @@ SEED_ROWS: dict[str, list[dict[str, Any]]] = {
   '保留天数': '分区治理样例1',
   '冷热阈值': '分区治理样例1',
   '预建天数': '分区治理样例1',
-  '归档路径': '分区治理样例1'},
+  '归档路径': '分区治理样例1',
+  '生效日期': '2026-09-01'},
  {'id': 2,
   'status': '方案审批中',
   'pending': True,
@@ -243,7 +272,8 @@ SEED_ROWS: dict[str, list[dict[str, Any]]] = {
   '保留天数': '分区治理样例2',
   '冷热阈值': '分区治理样例2',
   '预建天数': '分区治理样例2',
-  '归档路径': '分区治理样例2'},
+  '归档路径': '分区治理样例2',
+  '生效日期': '2026-09-02'},
  {'id': 3,
   'status': '已启用',
   'pending': False,
@@ -255,7 +285,34 @@ SEED_ROWS: dict[str, list[dict[str, Any]]] = {
   '保留天数': '分区治理样例3',
   '冷热阈值': '分区治理样例3',
   '预建天数': '分区治理样例3',
-  '归档路径': '分区治理样例3'}],
+  '归档路径': '分区治理样例3',
+  '生效日期': '2026-09-03'},
+ {'id': 4,
+  'status': '已启用',
+  'pending': False,
+  'abnormal': False,
+  '方案编号': 'PART-0004',
+  '数据表名': 'DWD_ORDER',
+  '分区字段': 'dt',
+  '分区粒度': '按天',
+  '保留天数': '90',
+  '冷热阈值': '30',
+  '预建天数': '7',
+  '归档路径': '/archive/dwd_order',
+  '生效日期': '2026-10-01'},
+ {'id': 5,
+  'status': '已启用',
+  'pending': False,
+  'abnormal': False,
+  '方案编号': 'PART-0005',
+  '数据表名': 'DWD_ORDER',
+  '分区字段': 'dt',
+  '分区粒度': '按天',
+  '保留天数': '60',
+  '冷热阈值': '20',
+  '预建天数': '3',
+  '归档路径': '/archive/dwd_order_old',
+  '生效日期': '2026-08-01'}],
     "quality": [{'id': 1,
   'status': '草稿',
   'pending': True,
@@ -519,6 +576,7 @@ SEED_ROWS: dict[str, list[dict[str, Any]]] = {
   '归档格式': '数据生命周期样例1',
   '删除确认': '数据生命周期样例1',
   '归档路径': '数据生命周期样例1',
+  '生效日期': '2026-09-01',
   '最后执行时间': '2026-09-01'},
  {'id': 2,
   'status': '策略评审中',
@@ -531,6 +589,7 @@ SEED_ROWS: dict[str, list[dict[str, Any]]] = {
   '归档格式': '数据生命周期样例2',
   '删除确认': '数据生命周期样例2',
   '归档路径': '数据生命周期样例2',
+  '生效日期': '2026-09-02',
   '最后执行时间': '2026-09-02'},
  {'id': 3,
   'status': '已启用',
@@ -543,7 +602,21 @@ SEED_ROWS: dict[str, list[dict[str, Any]]] = {
   '归档格式': '数据生命周期样例3',
   '删除确认': '数据生命周期样例3',
   '归档路径': '数据生命周期样例3',
-  '最后执行时间': '2026-09-03'}],
+  '生效日期': '2026-09-03',
+  '最后执行时间': '2026-09-03'},
+ {'id': 4,
+  'status': '已启用',
+  'pending': False,
+  'abnormal': False,
+  '策略编号': 'LIFE-0004',
+  '数据表名': 'DWD_ORDER',
+  '保留天数': '180',
+  '冷数据阈值': '60',
+  '归档格式': 'ORC',
+  '删除确认': '需要',
+  '归档路径': '/cold/dwd_order',
+  '生效日期': '2026-09-01',
+  '最后执行时间': '2026-11-01'}],
     "cost": [{'id': 1,
   'status': '草稿',
   'pending': True,
@@ -579,7 +652,19 @@ SEED_ROWS: dict[str, list[dict[str, Any]]] = {
   '查询次数': '存储成本样例3',
   '存储成本': '存储成本样例3',
   '计算成本': '存储成本样例3',
-  '统计月份': '存储成本样例3'}],
+  '统计月份': '存储成本样例3'},
+ {'id': 4,
+  'status': '已生成',
+  'pending': True,
+  'abnormal': False,
+  '账单编号': 'COST-0004',
+  '数据表名': 'DWD_ORDER',
+  '存储大小GB': '930',
+  '每日扫描量GB': '120',
+  '查询次数': '86',
+  '存储成本': '186.00',
+  '计算成本': '45.50',
+  '统计月份': '2026-11'}],
     "sync": [{'id': 1,
   'status': '草稿',
   'pending': True,
@@ -651,5 +736,24 @@ SEED_ROWS: dict[str, list[dict[str, Any]]] = {
   '变更后值': '变更审计样例3',
   '操作人': '变更审计样例3',
   '操作时间': '2026-09-03',
-  '变更原因': '变更审计样例3'}]
+  '变更原因': '变更审计样例3'}],
+    "governance": [{'id': 1,
+  'status': '草稿',
+  'pending': True,
+  'abnormal': False,
+  '计划编号': 'PLAN-0001',
+  '数据表名': 'DWD_ORDER',
+  '分区粒度': '按天',
+  '预建天数': '7',
+  '保留天数': '90',
+  '冷热阈值': '30',
+  '归档路径': '/archive/dwd_order',
+  '生效日期': '2026-10-01',
+  '来源方案编号': 'PART-0004',
+  '来源策略编号': 'LIFE-0004',
+  '冲突原因': '数据表 DWD_ORDER 存在多个已启用分区方案，按生效日期更晚的 PART-0004（2026-10-01）为准，PART-0005（2026-08-01）不执行；生命周期策略 LIFE-0004 与分区方案 PART-0004 冲突（保留天数 策略180/方案90、冷数据阈值 策略60/方案30、归档路径 策略/cold/dwd_order/方案/archive/dwd_order），按生效日期更晚且已启用的分区方案为准',
+  '版本': '1',
+  '最近演练编号': '',
+  '最近作业编号': ''}],
+    "_governance_ledger": _expired_evidence_rows(),
 }
